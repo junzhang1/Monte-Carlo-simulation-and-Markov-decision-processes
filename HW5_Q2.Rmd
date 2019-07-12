@@ -1,0 +1,57 @@
+```{r}
+Imax <- 100								              #initial inventory
+T <- 12										                #number of time periods
+price_all_periods <- seq(100,210,by=10)		#vector of prices per period
+lambda <- 9									              #average monthly demand
+#Initialization of decisions
+optimal_policy <- matrix(-1,Imax+1,T)#The first dimension corresponds to the state variable between 0 and Imax
+ 
+#Initialization of value-to-go function
+V <- matrix(rep(-1,(Imax+1)*(T+1)),Imax+1,(T+1))
+V[,T+1] <- 0 #complete with the terminal reward (at the end of the horizon)
+ 
+for (t in seq(T,1,by=-1)){#Backward induction loop
+    
+    price <- price_all_periods[t]#Determination of price in month under consideration
+    
+    for (x in 0:Imax){#Loop over all the states
+        
+        #Vector of the expected reward of each decision for that specific state
+        value_decision <- rep(0,x+1) #there are x+1 potential decisions: 0, 1, ..., x
+        
+        for (u in 0:x){#Loop over all possible decisions
+            
+            #Loop over all possible realizations of demand to compute its probability and the associated total reward
+            probability <- rep(-1,31)
+            total_reward <- rep(-1,31)
+            for (demand in 0:30){
+                #what is the probability of the demand realization under consideration? store it in "probability"
+                probability[demand+1] <- dpois(demand, lambda)
+                #under the demand realization under consideration...
+                #what is the number of rooms booked?
+                booked <- min(demand, u)
+                #what is the revenue in period t?
+                reward_t <- booked * price
+                #what is the next state of the system (beginning of month t+1)?
+                next_state <- x - booked
+                #what is the future reward of the system (from beginning of month t+1 onward)?
+                reward_t_1 <- V[next_state+1,t+1]
+                #what is the total reward? store it in "total_reward"
+                total_reward[demand+1] <- reward_t+reward_t_1
+            }
+            #What is the expected reward associated with decision u across all demand realizations? store it in "expected_reward_decision"
+            value_decision[u+1] <- sum(probability*total_reward)
+        }
+        #What is the highest expected reward in state x? store it in "V"
+        optimal_policy[x+1,t] <- which.max(value_decision)-1
+        #What is the decision that will lead to the highest expected reward in state x? store it in "optimal_policy"
+        V[x+1,t] <- max (value_decision)
+    }
+}
+
+```
+
+```{r}
+optimal_policy
+```
+

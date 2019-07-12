@@ -1,0 +1,79 @@
+
+```{r}
+MyData <- read.csv(file="/Users/zhangjun/Desktop/DecisionAnalytics/94.867_HW5/booking_limits.csv", header=TRUE)
+```
+
+```{r}
+N1 <- 100
+N2 <- 1000
+N3 <- 10000
+
+lambda_T <- 9
+T <- 12
+
+monthly_inventory <- rep(0,T)
+inventory_simu <- matrix(NA,N1,T)
+monthly_revenue <- rep(0,T)
+revenue_simu <- rep(0,N1)
+booked_simu <- rep(0,N1)
+booking_limit <- MyData
+
+for (simul in 1:N1){
+    inventory <- 100
+    revenue <- 0
+    not_fully_booked <- 1
+    for (time_elapsed in 1:T){
+      demand <- rpois(1,lambda_T)
+      if ((demand <= inventory) & (demand <= booking_limit[inventory+1,time_elapsed])) {
+        revenue <- demand * (100+(time_elapsed-1)*10)
+        monthly_revenue[time_elapsed] <- revenue
+        inventory <- inventory - demand
+        monthly_inventory[time_elapsed] <- inventory
+      } else if ((booking_limit[inventory+1,time_elapsed] < demand) & (booking_limit[inventory+1,time_elapsed] <= inventory)) {
+        revenue <- booking_limit[inventory+1,time_elapsed] * (100+(time_elapsed-1)*10)
+        monthly_revenue[time_elapsed] <- revenue
+        inventory <- inventory - booking_limit[inventory+1,time_elapsed]
+        monthly_inventory[time_elapsed] <- inventory
+      } else {
+        revenue <- inventory * (100+(time_elapsed-1)*10)
+        monthly_revenue[time_elapsed] <- revenue
+        inventory <- 0
+        monthly_inventory[time_elapsed] <- inventory
+      } 
+    }
+    if (monthly_inventory[12]==0){
+        not_fully_booked <- 0
+      }
+    revenue_simu[simul] <- sum(monthly_revenue)
+    inventory_simu[simul,] <- monthly_inventory
+    booked_simu[simul] <- not_fully_booked
+}
+
+revenue_simu
+inventory_simu
+not_booked <- sum(booked_simu)/N1
+not_booked
+```
+
+
+```{r}
+require(plotly)
+a <- c(revenue_simu)
+hist(a, xlab = 'Revenue', main = 'Histogram of Revenue')
+```
+
+```{r}
+mean_revenue <- mean(revenue_simu)
+mean_revenue
+std_revenue <- sd(revenue_simu)
+std_revenue
+CI_revenue <- c(mean_revenue-1.96*std_revenue/sqrt(N1),mean_revenue+1.96*std_revenue/sqrt(N1))
+CI_revenue
+```
+
+```{r}
+mean_book <- mean(booked_simu)
+mean_book
+CI_book <- c(mean_book-1.96*sqrt(mean_book*(1-mean_book)/N1),mean_book+1.96*sqrt(mean_book*(1-mean_book)/N1))
+CI_book
+```
